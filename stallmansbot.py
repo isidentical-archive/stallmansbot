@@ -1,3 +1,4 @@
+import json
 import re
 import socket
 from collections import defaultdict
@@ -19,6 +20,14 @@ class Client:
         self.mode = "run"
 
     @classmethod
+    def from_conf(cls, config_file):
+        with open(config_file) as f:
+            content = f.read()
+
+        config = json.loads(content)
+        return cls(**config)
+
+    @classmethod
     def register(cls, *patterns):
         def wrapper(func):
             cls._callbacks[patterns].append(func)
@@ -27,6 +36,8 @@ class Client:
         return wrapper
 
     def connect(self, room):
+        if not room.startswith("#"):
+            room = "#" + room
         self._room = room
         self.push_cmd("join", room)
 
@@ -81,4 +92,5 @@ def gnu_receiver(self, author, message, matches):
 
 
 if __name__ == "__main__":
-    pass
+    c = Client.from_conf('../configs/stallmansbot.json')
+    c.connect('btaskaya')

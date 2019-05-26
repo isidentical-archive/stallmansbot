@@ -12,4 +12,4 @@ Feel free to add handlers and PR.
 - grep
 
 ## Trolled Streams
-- @asottile - May 25 - [Clip](https://clips.twitch.tv/CovertColdbloodedReubenCoolCat)
+- [AnthonyWritesCode](https://www.twitch.tv/anthonywritescode/clips?tt_content=player_profile_img) - May 25 - [Clip](https://clips.twitch.tv/CovertColdbloodedReubenCoolCat)
