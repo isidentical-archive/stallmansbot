@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import atexit
 import json
 import logging
@@ -138,6 +139,83 @@ class Client(AbstractTwitchClient):
 
         return wrapper
 
+    @classmethod
+    def register_callbackfile(cls, cb_file):
+        callbacks = ConfigParser()
+        callbacks.read(cb_file)
+        for section in callbacks.sections():
+            cls._create_callback(section, **callbacks[section])
+
+    @classmethod
+    def _create_callback(cls, name, handles, message, **kwargs):
+        def generate_args(*args):
+            for arg in args:
+                yield ast.arg(arg, annotation=None)
+
+        def construct_node(node):
+            if node.startswith("name:"):
+                node = node.replace("name:", "")
+                node = ast.Name(node, ast.Load())
+            elif node.startswith("op:"):
+                node = node.replace("op:", "")
+                node = ast.Attribute(
+                    ast.Call(
+                        ast.Name("__import__", ast.Load()), [ast.Str("operator")], []
+                    ),
+                    node,
+                    ast.Load(),
+                )
+            else:
+                node = ast.Str(node)
+
+            return node
+
+        args = ast.arguments(
+            args=list(generate_args("self", "room", "author", "message", "matches")),
+            vararg=None,
+            kwonlyargs=[],
+            kw_defaults=[],
+            kwarg=None,
+            defaults=[],
+        )
+
+        checks = kwargs.get("checks")
+        if checks:
+            checks = checks.split(" ")
+            operator = construct_node(checks.pop(1))
+            test = ast.Call(
+                operator,
+                list(map(lambda node: construct_node(node), checks)),
+                keywords=[],
+            )
+        else:
+            test = ast.NameConstant(True)
+
+        post_checks = kwargs.get("post_checks")
+        if post_checks:
+            post_checks = post_checks.split(" ")
+            for post_check in post_checks:
+                test = ast.Call(construct_node(post_check), [test], keywords=[])
+
+        message = ast.parse(f"f'{message}'", mode="exec")
+        ast.fix_missing_locations(message)
+        message = message.body[0].value
+        body = ast.Expr(
+            ast.Call(
+                ast.Attribute(ast.Name("self", ast.Load()), "send_message", ast.Load()),
+                [construct_node("name:room"), message],
+                keywords=[],
+            )
+        )
+        body = ast.If(test, [body], [])
+        func = ast.FunctionDef(name, args, [body], [], None)
+        func = ast.Module([func])
+        ast.fix_missing_locations(func)
+
+        namespace = {}
+        func = exec(compile(func, "<stallmansbot/dsl>", "exec"), namespace)
+        cls.register(handles)(namespace.get(name))
+
     def _connect(self, room):
         self.logger.debug("Connecting to %s", room)
         if not room.startswith("#"):
@@ -185,6 +263,7 @@ class Client(AbstractTwitchClient):
             matches = []
 
             for pattern in patterns:
+                print(pattern)
                 if pattern in message.lower():
                     pass_this = False
                     matches.append(pattern)
@@ -236,7 +315,7 @@ def interject(author):
     partial(get_channels, "audited_by_gnu"),
     operator.not_,
 )
-def gnu_receiver(self, room, author, message, matches):
+def on_gnu(self, room, author, message, matches):
     def not_generator(thing):
         return f"Not {thing}, GNU/{thing.title()}"
 
@@ -248,7 +327,7 @@ def gnu_receiver(self, room, author, message, matches):
 
 
 @Client.register("stallman", "richard stallman", "rms")
-def rms_receiver(self, room, author, message, matches):
+def on_rms(self, room, author, message, matches):
     match = matches.pop()
     if "holy" not in message.lower():
         self.send_message(room, f"Guys please. Not {match}, Holy {match}")
@@ -257,23 +336,26 @@ def rms_receiver(self, room, author, message, matches):
 
 
 @Client.register("total gnu domination")
-def domination_receiver(self, room, *args):
+def on_domination(self, room, *args):
     calendar = TextCalendar()
     self.send_message(room, calendar.formatmonth(2020, 1))
 
 
 @Client.register("platform")
-def platform_receiver(self, room, *args):
+def on_platform(self, room, *args):
     plat = platform.system()
     self.send_message(room, f"This bot runs under GNU/{plat}")
 
 
 @Client.register("source")
-def source_receiver(self, room, *args):
+def on_source(self, room, *args):
     self.send_message(
         room,
         "The GNU/stallmansbot 's source licensed under GPLv3 and distributed through github. https://github.com/isidentical/stallmansbot",
     )
+
+
+Client.register_callbackfile("callbacks.ini")
 
 
 if __name__ == "__main__":
