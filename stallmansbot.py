@@ -1,14 +1,48 @@
+from __future__ import annotations
+
 import json
+import operator
 import re
 import shelve
 import socket
+import traceback
 from collections import defaultdict
 from contextlib import suppress
+from dataclasses import dataclass
+from enum import Enum
+from functools import partial
 from io import StringIO
+from typing import Any, Callable, Sequence
+
 from tools import add_channel, get_channels
 
 with open("assets/interject.txt") as f:
     INTERJECTION_MESSAGE = f.read()
+
+
+@dataclass(frozen=True)
+class Marker:
+    lhs: Markers
+    operation: Callable
+    rhs: Callable
+    post_hooks: Sequence[Callable[[Any], Any]] = ()
+
+    @classmethod
+    def mark(cls, lhs, operation, rhs, *post_hooks):
+        def wrapper(callback):
+            callback._marker = cls(lhs, operation, rhs, post_hooks)
+            return callback
+
+        return wrapper
+
+
+class Markers(Enum):
+    ROOM = "room"
+    AUTHOR = "author"
+    MESSAGE = "message"
+
+    def __str__(self):
+        return self.value
 
 
 class Client:
@@ -51,7 +85,7 @@ class Client:
         buffer = str()
         try:
             while self.mode != "quit":
-                with suppress(Exception):
+                try:
                     buffer = buffer + self.con.recv(1024).decode("UTF-8")
                     _buffer = re.split(r"[~\r\n]+", buffer)
                     buffer = _buffer.pop()
@@ -63,6 +97,9 @@ class Client:
                                 self.push_cmd("pong", line[1])
                             if line[1] == "PRIVMSG":
                                 self.dispatch_message(line)
+                except Exception as e:
+                    traceback.print_exc()
+
         except KeyboardInterrupt:
             new_channel_to_spread_free_software_movement = input("Channel: ")
             add_channel(new_channel_to_spread_free_software_movement)
@@ -87,6 +124,15 @@ class Client:
                 continue
 
             for callback in callbacks:
+                if hasattr(callback, "_marker"):
+                    rhs = tuple(callback._marker.rhs())
+                    lhs = locals().get(str(callback._marker.lhs))
+                    marker = callback._marker.operation(rhs, lhs)
+                    for post_hook in callback._marker.post_hooks:
+                        marker = post_hook(marker)
+                    if not marker:
+                        continue
+
                 callback(self, room, author, message, matches)
 
     def push_cmd(self, cmd, value):
@@ -114,6 +160,12 @@ def interject(author):
 
 
 @Client.register("nano", "linux", "emacs", "grep", "windows", "vscode", "visual studio")
+@Marker.mark(
+    Markers.ROOM,
+    operator.contains,
+    partial(get_channels, "audited_by_gnu"),
+    operator.not_,
+)
 def gnu_receiver(self, room, author, message, matches):
     def not_generator(thing):
         return f"Not {thing}, GNU/{thing.title()}"
@@ -124,13 +176,15 @@ def gnu_receiver(self, room, author, message, matches):
         msg = ". ".join(not_generator(thing) for thing in matches)
         self.send_message(room, f"Guys, please. {msg}")
 
+
 @Client.register("stallman", "richard stallman", "rms")
 def rms_receiver(self, room, author, message, matches):
     match = matches.pop()
     if "holy" not in message.lower():
-        self.send_message(room, f"Guys please. Not {match}, HOLY {match}")
+        self.send_message(room, f"Guys please. Not {match}, Holy {match}")
     else:
-        self.send_message(room, f"God may bless HOLY {match}")
+        self.send_message(room, f"God may bless Holy {match}")
+
 
 if __name__ == "__main__":
     c = Client.from_conf("../configs/stallmansbot.json")
