@@ -6,10 +6,13 @@ Not <thing>, GNU/<thing> please.
 ## Handlers
 Feel free to add handlers and PR.
 
-- nano
-- linux
-- emacs
-- grep
+## Tools
+```
+$ python -i tools.py
+>>> remove_channel(<ch>)
+>>> add_channel(<ch>)
+>>> get_channels()
+```
 
 ## Trolled Streams
 - [AnthonyWritesCode](https://www.twitch.tv/anthonywritescode/clips?tt_content=player_profile_img) - May 25 - [Clip](https://clips.twitch.tv/CovertColdbloodedReubenCoolCat)

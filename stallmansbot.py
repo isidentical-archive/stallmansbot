@@ -5,6 +5,7 @@ import socket
 from collections import defaultdict
 from contextlib import suppress
 from io import StringIO
+from tools import add_channel, get_channels
 
 with open("assets/interject.txt") as f:
     INTERJECTION_MESSAGE = f.read()
@@ -103,16 +104,6 @@ class Client:
         return header.split("!")[0][1:]
 
 
-def add_channel(channel):
-    with shelve.open("db/communities", writeback=True) as db:
-        if not db.get("channels"):
-            db["channels"] = []
-
-        if channel not in db["channels"]:
-            db["channels"].append(channel)
-            print(f"Adding a new channel to spread the movement! Welcome {channel}")
-
-
 def interject(author):
     with shelve.open("db/not_gnu_folks") as db:
         db[author] = db.get(author, 0) + 1
@@ -122,7 +113,7 @@ def interject(author):
     return False
 
 
-@Client.register("nano", "linux", "emacs", "grep")
+@Client.register("nano", "linux", "emacs", "grep", "windows", "vscode", "visual studio")
 def gnu_receiver(self, room, author, message, matches):
     def not_generator(thing):
         return f"Not {thing}, GNU/{thing.title()}"
@@ -136,10 +127,9 @@ def gnu_receiver(self, room, author, message, matches):
 
 if __name__ == "__main__":
     c = Client.from_conf("../configs/stallmansbot.json")
-    with shelve.open("db/communities") as db:
-        for channel in db.get("channels", ()):
-            print(f"Connecting to #{channel}")
-            c._connect(channel)
+    for channel in get_channels():
+        print(f"Connecting to #{channel}")
+        c._connect(channel)
 
     print(f"Starting receiver")
     c.connect("btaskaya")
