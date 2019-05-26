@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import atexit
 import json
+import mmap
 import operator
+import random
 import re
 import shelve
 import socket
@@ -16,6 +19,23 @@ from io import StringIO
 from typing import Any, Callable, Sequence
 
 from tools import add_channel, get_channels
+
+
+def _get_total_lines(f):
+    buffer = mmap.mmap(f.fileno(), 0)
+    counter = 0
+    while buffer.readline():
+        counter += 1
+    return counter
+
+
+@atexit.register
+def thanker():
+    with open(f"assets/quotes.txt") as quotes:
+        quotes = quotes.read().strip().split("%")
+
+    print(random.choice(quotes))
+
 
 with open("assets/interject.txt") as f:
     INTERJECTION_MESSAGE = f.read()
