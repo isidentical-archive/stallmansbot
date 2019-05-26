@@ -211,11 +211,13 @@ class Client(AbstractTwitchClient):
         func = ast.FunctionDef(name, args, [body], [], None)
         func = ast.Module([func])
         ast.fix_missing_locations(func)
+        import astor
+        print(astor.to_source(func))
 
         namespace = {}
         func = exec(compile(func, "<stallmansbot/dsl>", "exec"), namespace)
         cls.register(handles)(namespace.get(name))
-
+        
     def _connect(self, room):
         self.logger.debug("Connecting to %s", room)
         if not room.startswith("#"):
