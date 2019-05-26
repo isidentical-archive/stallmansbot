@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import atexit
 import json
+import logging
 import mmap
 import operator
 import random
 import re
 import shelve
 import socket
+import sys
 import traceback
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -17,7 +19,7 @@ from dataclasses import dataclass
 from enum import Enum
 from functools import partial
 from io import StringIO
-from typing import Any, Callable, Sequence, Union, AnyStr
+from typing import Any, AnyStr, Callable, Sequence, Union
 
 from tools import add_channel, get_channels
 
@@ -95,6 +97,18 @@ class Client(AbstractTwitchClient):
 
         self.mode = "run"
 
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.DEBUG)
+
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setLevel(logging.DEBUG)
+
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
+
     @classmethod
     def from_microsofts_ini(cls, config_file):
         cfg = ConfigParser()
@@ -121,6 +135,7 @@ class Client(AbstractTwitchClient):
         return wrapper
 
     def _connect(self, room):
+        self.logger.debug("Connecting to %s", room)
         if not room.startswith("#"):
             room = "#" + room
         self.push_cmd("join", room)
@@ -130,6 +145,7 @@ class Client(AbstractTwitchClient):
 
         buffer = str()
         try:
+            self.logger.info("Starting receiver")
             while self.mode != "quit":
                 try:
                     buffer = buffer + self.con.recv(1024).decode("UTF-8")
@@ -144,7 +160,7 @@ class Client(AbstractTwitchClient):
                             if line[1] == "PRIVMSG":
                                 self.dispatch_message(line)
                 except Exception as e:
-                    traceback.print_exc()
+                    self.logger.exception(e)
 
         except KeyboardInterrupt:
             new_channel_to_spread_free_software_movement = input("Channel: ")
@@ -156,7 +172,7 @@ class Client(AbstractTwitchClient):
         room, *message = line[1:]
         message = " ".join(message)[1:]
 
-        print(f"{room}/{author}: {message}")
+        self.logger.info(f"{room}/{author}: {message}")
         for patterns, callbacks in self._callbacks.items():
             pass_this = True
             matches = []
@@ -235,8 +251,6 @@ def rms_receiver(self, room, author, message, matches):
 if __name__ == "__main__":
     c = Client.from_conf("../configs/stallmansbot.ini")
     for channel in get_channels():
-        print(f"Connecting to #{channel}")
         c._connect(channel)
 
-    print(f"Starting receiver")
     c.connect("btaskaya")
