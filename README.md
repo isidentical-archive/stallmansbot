@@ -16,3 +16,4 @@ $ python -i tools.py
 
 ## Trolled Streams
 - [AnthonyWritesCode](https://www.twitch.tv/anthonywritescode/clips?tt_content=player_profile_img) - May 25 - [Clip](https://clips.twitch.tv/CovertColdbloodedReubenCoolCat)
+- [syanoks](https://www.twitch.tv/syanoks) - May 26 - [Clip](https://clips.twitch.tv/HumbleObservantAnteaterPraiseIt)
