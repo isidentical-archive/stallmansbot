@@ -6,6 +6,9 @@ from collections import defaultdict
 from contextlib import suppress
 from io import StringIO
 
+with open("assets/interject.txt") as f:
+    INTERJECTION_MESSAGE = f.read()
+
 
 class Client:
     ADDR = ("irc.twitch.tv", 6667)
@@ -79,23 +82,28 @@ class Client:
 
     def push_cmd(self, cmd, value):
         request = f"{cmd.upper()} {value}\r\n"
+        print(request)
         self.con.send(request.encode("utf8"))
 
     def send_message(self, room, message):
         self.push_cmd("privmsg", f"{room} :{message}")
 
+    def whisper(self, room, author, message):
+        self.send_message(room, f"/w {author} {message}")
+
     @staticmethod
     def obtain_author(header):
-        return header.split('!')[0][1:]
+        return header.split("!")[0][1:]
 
 
 def interject(author):
-    with shelve.open('not_gnu_folks') as db:
+    with shelve.open("not_gnu_folks") as db:
         db[author] = db.get(author, 0) + 1
-        if db[author] > 5:
+        if db[author] > 25:
             db[author] = 0
             return True
     return False
+
 
 @Client.register("nano", "linux", "emacs", "grep")
 def gnu_receiver(self, room, author, message, matches):
@@ -104,7 +112,7 @@ def gnu_receiver(self, room, author, message, matches):
 
     if "gnu" not in message.lower():
         if interject(author):
-            print(1)
+            self.whisper(room, author, INTERJECTION_MESSAGE)
         msg = ". ".join(not_generator(thing) for thing in matches)
         self.send_message(room, f"Guys, please. {msg}")
 
