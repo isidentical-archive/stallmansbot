@@ -7,6 +7,7 @@ import shelve
 import socket
 import traceback
 from collections import defaultdict
+from configparser import ConfigParser
 from contextlib import suppress
 from dataclasses import dataclass
 from enum import Enum
@@ -59,7 +60,16 @@ class Client:
         self.mode = "run"
 
     @classmethod
+    def from_microsofts_ini(cls, config_file):
+        cfg = ConfigParser()
+        cfg.read(config_file)
+        return cls(**cfg["bot"])
+
+    @classmethod
     def from_conf(cls, config_file):
+        if config_file.endswith(".ini"):
+            return cls.from_microsofts_ini(config_file)
+
         with open(config_file) as f:
             content = f.read()
 
@@ -187,7 +197,7 @@ def rms_receiver(self, room, author, message, matches):
 
 
 if __name__ == "__main__":
-    c = Client.from_conf("../configs/stallmansbot.json")
+    c = Client.from_conf("../configs/stallmansbot.ini")
     for channel in get_channels():
         print(f"Connecting to #{channel}")
         c._connect(channel)
