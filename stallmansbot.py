@@ -1,5 +1,6 @@
 import json
 import re
+import shelve
 import socket
 from collections import defaultdict
 from contextlib import suppress
@@ -56,10 +57,11 @@ class Client:
                         self.dispatch_message(line)
 
     def dispatch_message(self, line):
-        room, *message = line[2:]
+        author = self.obtain_author(line.pop(0))
+        room, *message = line[1:]
         message = " ".join(message)[1:]
 
-        print(f"In {room} someone said {message}")
+        print(f"{room}/{author}: {message}")
         for patterns, callbacks in self._callbacks.items():
             pass_this = True
             matches = []
@@ -73,7 +75,7 @@ class Client:
                 continue
 
             for callback in callbacks:
-                callback(self, room, message, matches)
+                callback(self, room, author, message, matches)
 
     def push_cmd(self, cmd, value):
         request = f"{cmd.upper()} {value}\r\n"
@@ -82,13 +84,27 @@ class Client:
     def send_message(self, room, message):
         self.push_cmd("privmsg", f"{room} :{message}")
 
+    @staticmethod
+    def obtain_author(header):
+        return header.split('!')[0][1:]
+
+
+def interject(author):
+    with shelve.open('not_gnu_folks') as db:
+        db[author] = db.get(author, 0) + 1
+        if db[author] > 5:
+            db[author] = 0
+            return True
+    return False
 
 @Client.register("nano", "linux", "emacs", "grep")
-def gnu_receiver(self, room, message, matches):
+def gnu_receiver(self, room, author, message, matches):
     def not_generator(thing):
         return f"Not {thing}, GNU/{thing.title()}"
 
     if "gnu" not in message.lower():
+        if interject(author):
+            print(1)
         msg = ". ".join(not_generator(thing) for thing in matches)
         self.send_message(room, f"Guys, please. {msg}")
 
