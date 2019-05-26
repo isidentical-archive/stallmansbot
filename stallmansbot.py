@@ -267,6 +267,14 @@ def platform_receiver(self, room, *args):
     self.send_message(room, f"This bot runs under GNU/{plat}")
 
 
+@Client.register("source")
+def source_receiver(self, room, *args):
+    self.send_message(
+        room,
+        "The GNU/stallmansbot 's source licensed under GPLv3 and distributed through github. https://github.com/isidentical/stallmansbot",
+    )
+
+
 if __name__ == "__main__":
     c = Client.from_conf("../configs/stallmansbot.ini")
     for channel in get_channels():
