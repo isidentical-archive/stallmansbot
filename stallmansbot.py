@@ -39,11 +39,13 @@ class Client:
 
         return wrapper
 
-    def connect(self, room):
+    def _connect(self, room):
         if not room.startswith("#"):
             room = "#" + room
-        self._room = room
         self.push_cmd("join", room)
+
+    def connect(self, room):
+        self._connect(room)
 
         buffer = str()
         try:
@@ -62,6 +64,7 @@ class Client:
                                 self.dispatch_message(line)
         except KeyboardInterrupt:
             new_channel_to_spread_free_software_movement = input("Channel: ")
+            add_channel(new_channel_to_spread_free_software_movement)
             self.connect(new_channel_to_spread_free_software_movement)
 
     def dispatch_message(self, line):
@@ -100,8 +103,18 @@ class Client:
         return header.split("!")[0][1:]
 
 
+def add_channel(channel):
+    with shelve.open("db/communities", writeback=True) as db:
+        if not db.get("channels"):
+            db["channels"] = []
+
+        if channel not in db["channels"]:
+            db["channels"].append(channel)
+            print(f"Adding a new channel to spread the movement! Welcome {channel}")
+
+
 def interject(author):
-    with shelve.open("not_gnu_folks") as db:
+    with shelve.open("db/not_gnu_folks") as db:
         db[author] = db.get(author, 0) + 1
         if db[author] > 25:
             db[author] = 0
@@ -123,4 +136,10 @@ def gnu_receiver(self, room, author, message, matches):
 
 if __name__ == "__main__":
     c = Client.from_conf("../configs/stallmansbot.json")
+    with shelve.open("db/communities") as db:
+        for channel in db.get("channels", ()):
+            print(f"Connecting to #{channel}")
+            c._connect(channel)
+
+    print(f"Starting receiver")
     c.connect("btaskaya")
