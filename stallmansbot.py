@@ -53,44 +53,46 @@ class Client:
                     if line[0] == "PING":
                         self.push_cmd("pong", line[1])
                     if line[1] == "PRIVMSG":
-                        author, *message = line[2:]
-                        message = " ".join(message)[1:]
-                        author = author[1:]
+                        self.dispatch_message(line)
 
-                        print(f"{author}: {message}")
-                        for patterns, callbacks in self._callbacks.items():
-                            pass_this = True
-                            matches = []
+    def dispatch_message(self, line):
+        room, *message = line[2:]
+        message = " ".join(message)[1:]
 
-                            for pattern in patterns:
-                                if pattern in message.lower():
-                                    pass_this = False
-                                    matches.append(pattern)
+        print(f"In {room} someone said {message}")
+        for patterns, callbacks in self._callbacks.items():
+            pass_this = True
+            matches = []
 
-                            if pass_this:
-                                continue
+            for pattern in patterns:
+                if pattern in message.lower():
+                    pass_this = False
+                    matches.append(pattern)
 
-                            for callback in callbacks:
-                                callback(self, author, message, matches)
+            if pass_this:
+                continue
+
+            for callback in callbacks:
+                callback(self, room, message, matches)
 
     def push_cmd(self, cmd, value):
         request = f"{cmd.upper()} {value}\r\n"
         self.con.send(request.encode("utf8"))
 
-    def send_message(self, message):
-        self.push_cmd("privmsg", f"{self._room} :{message}")
+    def send_message(self, room, message):
+        self.push_cmd("privmsg", f"{room} :{message}")
 
 
 @Client.register("nano", "linux", "emacs", "grep")
-def gnu_receiver(self, author, message, matches):
+def gnu_receiver(self, room, message, matches):
     def not_generator(thing):
         return f"Not {thing}, GNU/{thing.title()}"
 
     if "gnu" not in message.lower():
         msg = ". ".join(not_generator(thing) for thing in matches)
-        self.send_message(f"Guys, please. {msg}")
+        self.send_message(room, f"Guys, please. {msg}")
 
 
 if __name__ == "__main__":
-    c = Client.from_conf('../configs/stallmansbot.json')
-    c.connect('btaskaya')
+    c = Client.from_conf("../configs/stallmansbot.json")
+    c.connect("btaskaya")
