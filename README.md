@@ -1,5 +1,5 @@
 # Stallman's Bot
-Not <thing>, GNU/<thing> please. 
+Not thing, GNU/thing please. 
 
 [Preview](https://i.imgyukle.com/2019/05/26/kTy4Kc.png)
 
