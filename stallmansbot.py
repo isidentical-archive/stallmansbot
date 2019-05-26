@@ -9,6 +9,7 @@ import re
 import shelve
 import socket
 import traceback
+from abc import ABC, abstractmethod
 from collections import defaultdict
 from configparser import ConfigParser
 from contextlib import suppress
@@ -16,7 +17,7 @@ from dataclasses import dataclass
 from enum import Enum
 from functools import partial
 from io import StringIO
-from typing import Any, Callable, Sequence
+from typing import Any, Callable, Sequence, Union, AnyStr
 
 from tools import add_channel, get_channels
 
@@ -66,7 +67,22 @@ class Markers(Enum):
         return self.value
 
 
-class Client:
+class AbstractTwitchClient(ABC):
+    @abstractmethod
+    def push_cmd(self, cmd: str, value: str) -> None:
+        """Sends an IRC message to active socket connection"""
+
+    @abstractmethod
+    def connect(self, room: str):
+        """Sends `connect` command to active socket connection
+        and runs until it get a `KeyboardInterrupt`"""
+
+    @abstractmethod
+    def dispatch_message(self, message: Union[AnyStr, Sequence[AnyStr]]):
+        """Parses message and dispatches to specified callbacks"""
+
+
+class Client(AbstractTwitchClient):
     ADDR = ("irc.twitch.tv", 6667)
     _callbacks = defaultdict(list)
 
