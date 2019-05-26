@@ -105,7 +105,7 @@ class Client(AbstractTwitchClient):
         self.logger.setLevel(logging.DEBUG)
 
         handler = logging.StreamHandler(sys.stdout)
-        handler.setLevel(logging.DEBUG)
+        handler.setLevel(logging.INFO)
 
         formatter = logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -179,7 +179,7 @@ class Client(AbstractTwitchClient):
         room, *message = line[1:]
         message = " ".join(message)[1:]
 
-        self.logger.info(f"{room}/{author}: {message}")
+        self.logger.debug(f"{room}/{author}: {message}")
         for patterns, callbacks in self._callbacks.items():
             pass_this = True
             matches = []
@@ -209,6 +209,7 @@ class Client(AbstractTwitchClient):
         self.con.send(request.encode("utf8"))
 
     def send_message(self, room, message):
+        self.logger.info("Sending %s to %s", message, room)
         self.push_cmd("privmsg", f"{room} :{message}")
 
     def whisper(self, room, author, message):
