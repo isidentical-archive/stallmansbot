@@ -7,6 +7,7 @@ import mmap
 import operator
 import random
 import re
+import sched
 import shelve
 import socket
 import sys
@@ -96,6 +97,7 @@ class Client(AbstractTwitchClient):
         self.push_cmd("nick", nick)
 
         self.mode = "run"
+        self.scheduler = sched.scheduler()
 
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
@@ -158,7 +160,10 @@ class Client(AbstractTwitchClient):
                             if line[0] == "PING":
                                 self.push_cmd("pong", line[1])
                             if line[1] == "PRIVMSG":
-                                self.dispatch_message(line)
+                                self.scheduler.enter(
+                                    0.5, 1, self.dispatch_message, argument=(line,)
+                                )
+                    self.scheduler.run()
                 except Exception as e:
                     self.logger.exception(e)
 
