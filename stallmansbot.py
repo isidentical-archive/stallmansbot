@@ -13,6 +13,7 @@ import socket
 import sys
 import traceback
 from abc import ABC, abstractmethod
+from calendar import TextCalendar
 from collections import defaultdict
 from configparser import ConfigParser
 from contextlib import suppress
@@ -251,6 +252,12 @@ def rms_receiver(self, room, author, message, matches):
         self.send_message(room, f"Guys please. Not {match}, Holy {match}")
     else:
         self.send_message(room, f"God may bless Holy {match}")
+
+
+@Client.register("total gnu domination")
+def domination_receiver(self, room, *args):
+    calendar = TextCalendar()
+    self.send_message(room, calendar.formatmonth(2020, 1))
 
 
 if __name__ == "__main__":
