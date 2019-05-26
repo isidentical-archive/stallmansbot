@@ -51,7 +51,7 @@ class Client:
         buffer = str()
         try:
             while self.mode != "quit":
-                with suppress(OSError):
+                with suppress(Exception):
                     buffer = buffer + self.con.recv(1024).decode("UTF-8")
                     _buffer = re.split(r"[~\r\n]+", buffer)
                     buffer = _buffer.pop()
@@ -124,6 +124,13 @@ def gnu_receiver(self, room, author, message, matches):
         msg = ". ".join(not_generator(thing) for thing in matches)
         self.send_message(room, f"Guys, please. {msg}")
 
+@Client.register("stallman", "richard stallman", "rms")
+def rms_receiver(self, room, author, message, matches):
+    match = matches.pop()
+    if "holy" not in message.lower():
+        self.send_message(room, f"Guys please. Not {match}, HOLY {match}")
+    else:
+        self.send_message(room, f"God may bless HOLY {match}")
 
 if __name__ == "__main__":
     c = Client.from_conf("../configs/stallmansbot.json")
