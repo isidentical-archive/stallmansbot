@@ -5,6 +5,7 @@ import json
 import logging
 import mmap
 import operator
+import platform
 import random
 import re
 import sched
@@ -258,6 +259,12 @@ def rms_receiver(self, room, author, message, matches):
 def domination_receiver(self, room, *args):
     calendar = TextCalendar()
     self.send_message(room, calendar.formatmonth(2020, 1))
+
+
+@Client.register("platform")
+def platform_receiver(self, room, *args):
+    plat = platform.system()
+    self.send_message(room, f"This bot runs under GNU/{plat}")
 
 
 if __name__ == "__main__":
