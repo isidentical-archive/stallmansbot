@@ -211,25 +211,25 @@ class Client(AbstractTwitchClient):
         func = ast.FunctionDef(name, args, [body], [], None)
         func = ast.Module([func])
         ast.fix_missing_locations(func)
-        import astor
-        print(astor.to_source(func))
 
         namespace = {}
         func = exec(compile(func, "<stallmansbot/dsl>", "exec"), namespace)
         cls.register(handles)(namespace.get(name))
-        
+
     def _connect(self, room):
         self.logger.debug("Connecting to %s", room)
         if not room.startswith("#"):
             room = "#" + room
         self.push_cmd("join", room)
 
-    def connect(self, room):
+    def connect(self, room, welcome_message=None):
         self._connect(room)
 
         buffer = str()
         try:
             self.logger.info("Starting receiver")
+            if welcome_message:
+                self.send_message(f"#{room}", welcome_message)
             while self.mode != "quit":
                 try:
                     buffer = buffer + self.con.recv(1024).decode("UTF-8")
@@ -251,8 +251,13 @@ class Client(AbstractTwitchClient):
 
         except KeyboardInterrupt:
             new_channel_to_spread_free_software_movement = input("Channel: ")
-            add_channel(new_channel_to_spread_free_software_movement)
-            self.connect(new_channel_to_spread_free_software_movement)
+            welcome_message = input("Welcome Message: ")
+            if welcome_message == "!":
+                welcome_message = None
+            add_to_db = input("Add to DB? ")
+            if add_to_db.lower() == "Y":
+                add_channel(new_channel_to_spread_free_software_movement)
+            self.connect(new_channel_to_spread_free_software_movement, welcome_message)
 
     def dispatch_message(self, line):
         author = self.obtain_author(line.pop(0))
@@ -265,7 +270,6 @@ class Client(AbstractTwitchClient):
             matches = []
 
             for pattern in patterns:
-                print(pattern)
                 if pattern in message.lower():
                     pass_this = False
                     matches.append(pattern)
