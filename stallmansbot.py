@@ -106,7 +106,7 @@ class Client(AbstractTwitchClient):
         self.logger.setLevel(logging.DEBUG)
 
         handler = logging.StreamHandler(sys.stdout)
-        handler.setLevel(logging.INFO)
+        handler.setLevel(logging.DEBUG)
 
         formatter = logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -172,6 +172,7 @@ class Client(AbstractTwitchClient):
 
         args = ast.arguments(
             args=list(generate_args("self", "room", "author", "message", "matches")),
+            posonlyargs=[],
             vararg=None,
             kwonlyargs=[],
             kw_defaults=[],
@@ -209,7 +210,7 @@ class Client(AbstractTwitchClient):
         )
         body = ast.If(test, [body], [])
         func = ast.FunctionDef(name, args, [body], [], None)
-        func = ast.Module([func])
+        func = ast.Module([func], type_ignores=[])
         ast.fix_missing_locations(func)
 
         namespace = {}
@@ -228,8 +229,6 @@ class Client(AbstractTwitchClient):
         buffer = str()
         try:
             self.logger.info("Starting receiver")
-            if welcome_message:
-                self.send_message(f"#{room}", welcome_message)
             while self.mode != "quit":
                 try:
                     buffer = buffer + self.con.recv(1024).decode("UTF-8")
@@ -250,14 +249,7 @@ class Client(AbstractTwitchClient):
                     self.logger.exception(e)
 
         except KeyboardInterrupt:
-            new_channel_to_spread_free_software_movement = input("Channel: ")
-            welcome_message = input("Welcome Message: ")
-            if welcome_message == "!":
-                welcome_message = None
-            add_to_db = input("Add to DB? ")
-            if add_to_db.lower() == "Y":
-                add_channel(new_channel_to_spread_free_software_movement)
-            self.connect(new_channel_to_spread_free_software_movement, welcome_message)
+            pass
 
     def dispatch_message(self, line):
         author = self.obtain_author(line.pop(0))
@@ -291,6 +283,8 @@ class Client(AbstractTwitchClient):
 
     def push_cmd(self, cmd, value):
         request = f"{cmd.upper()} {value}\r\n"
+        if hasattr(self, "logger"):
+            self.logger.info("Sending %s", request)
         self.con.send(request.encode("utf8"))
 
     def send_message(self, room, message):
@@ -357,7 +351,7 @@ def on_platform(self, room, *args):
 def on_source(self, room, *args):
     self.send_message(
         room,
-        "The GNU/stallmansbot 's source licensed under GPLv3 and distributed through github. https://github.com/isidentical/stallmansbot",
+        "The GNU/stallmansbot 's source licensed under GPLvfloat('inf') and distributed through github. https://github.com/isidentical/stallmansbot",
     )
 
 
@@ -365,8 +359,8 @@ Client.register_callbackfile("callbacks.ini")
 
 
 if __name__ == "__main__":
-    c = Client.from_conf("../configs/stallmansbot.ini")
+    c = Client.from_conf("../configs/stallmansbot.json")
     for channel in get_channels():
         c._connect(channel)
 
-    c.connect("btaskaya")
+    c.connect("isidentical")
